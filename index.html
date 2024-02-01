@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      height: 100vh;
+      width: 100vw;
+      position: fixed;
+      top: 0px;
+      left: 0px;
+      background-color: #2f3241;
+      -webkit-app-region: drag;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .navbar {
+      padding: 6px;
+      font-size: 20px;
+      color: #74b1be;
+      margin-left: 12px;
+    }
+
+    .main {
+      width: 100vw;
+      position: fixed;
+      left: 0px;
+      top: 30px;
+      height: calc(100vh - 80px);
+      overflow-y: auto;
+      -webkit-app-region: no-drag;
+      padding: 10px;
+    }
+
+    .message {
+      background-color: #3b3e4d;
+      color: #74b1be;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      width: 90vw;
+      font-weight: 900;
+    }
+
+    .input-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background-color: #2f3241;
+      -webkit-app-region: no-drag;
+      position: fixed;
+      bottom: 0;
+      width: 90vw;
+    }
+
+    .input-box {
+      width: calc(90vw - 20px);
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      margin-right: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .send-button {
+      padding: 8px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      outline: none;
+    }
+    p {
+      padding: 0;
+      margin: 0;
+    }
+    .message-content {
+      padding-left: 12px;
+      font-weight: normal;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 50%;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="navbar">
+    FreeAI ChatApp
+  </div>
+  <div class="main">
+    <div class="message"><div class="message-content">Hello there! My name is MeowGPT and I am here to talk to you! Just start chatting!</div></div>
+    <div class="input-container">
+      <input type="text" class="input-box" placeholder="Type your message...">
+      <button class="send-button">Send</button>
+    </div>
+  </div>
+</div>
+<script src="node_modules/marked/marked.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const apiKey = localStorage.getItem('apiKey');
+    let chatId = generateChatId();
+    const inputBox = document.querySelector('.input-box');
+    const sendButton = document.querySelector('.send-button');
+    inputBox.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        const userMessage = inputBox.value;
+        inputBox.disabled = true;
+        sendButton.disabled = true;
+        displayMessage('User', userMessage);
+        inputBox.value = '';
+        fetch(`https://api.splittic.app/api/reply?auth=${apiKey}&message=${encodeURIComponent(userMessage)}&chatid=${chatId}`)
+          .then(response => response.text())
+          .then(chatGPTResponse => displayMessage('MeowGPT', chatGPTResponse))
+          .catch(error => console.error('API Error:', error));
+        }
+    });
+    const mainContainer = document.querySelector('.main');
+    function scrollToBottom() {
+      mainContainer.scrollTop = mainContainer.scrollHeight;
+    }
+    if (!apiKey) {
+      openModal();
+    }
+    sendButton.addEventListener('click', function () {
+      const userMessage = inputBox.value;
+      inputBox.disabled = true;
+      sendButton.disabled = true;
+      displayMessage('User', userMessage);
+      inputBox.value = '';
+      fetch(`https://api.splittic.app/api/reply?auth=${apiKey}&message=${encodeURIComponent(userMessage)}&chatid=${chatId}`)
+        .then(response => response.text())
+        .then(chatGPTResponse => displayMessage('MeowGPT', chatGPTResponse))
+        .catch(error => console.error('API Error:', error));
+    });
+    function displayMessage(sender, message) {
+      const messageContainer = document.createElement('div');
+      messageContainer.className = 'message';
+      const parsedMessage = marked.marked(message);
+      messageContainer.innerHTML = `${sender}: <div class="message-content">${parsedMessage}</div>`;
+      mainContainer.appendChild(messageContainer);
+      scrollToBottom();
+      if (sender == "MeowGPT"){
+        inputBox.disabled = false;
+        sendButton.disabled = false;
+        inputBox.focus();
+      }
+      if (message == "Invalid API key") {
+        openModal();
+      }
+    }
+    function generateChatId() {
+      return Math.random().toString(36).substring(7);
+    }
+  });
+  function saveApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyInput').value;
+    if (apiKeyInput) {
+      localStorage.setItem('apiKey', apiKeyInput);
+      closeModal();
+    } else {
+      alert('Please enter a valid API key.');
+    }
+  }
+  function openModal() {
+    const modal = document.getElementById('apiKeyModal');
+    modal.style.display = 'block';
+  }
+  function closeModal() {
+    const modal = document.getElementById('apiKeyModal');
+    modal.style.display = 'none';
+  }
+</script>
+<div class="modal" id="apiKeyModal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <p>Please enter your API key:</p>
+    <input type="text" id="apiKeyInput" placeholder="Enter API key...">
+    <button onclick="saveApiKey()">Save</button>
+  </div>
+</div>
+
+</body>
+</html>
